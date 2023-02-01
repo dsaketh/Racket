@@ -1,0 +1,192 @@
+(define-struct routine (percent))
+(define-struct spot-clean (location))
+; A Roomba is one of:
+; - "Charging"
+; - (make-routine Natural)
+; - (make-spot-clean String)
+; - #false
+; interp.
+;  - "Charging" if the roomba is currently at its charging station
+;  - make-routine where the the natural number is the progress between 0 and 100 (ie. 0% and 100% done)
+;  - make-spot-clean where the String is the location in the house the roomba should go clean
+;  - #false if the roomba is offline or otherwise unreachable
+
+; Examples:
+(define CHARGING "Charging")
+(define START-ROUTINE (make-routine 0))
+(define HALF-ROUTINE (make-routine 50))
+(define DONE-ROUTINE (make-routine 100))
+(define GOTO-BED (make-spot-clean "Bed"))
+(define BROKEN-ROBO #false)
+
+; template:
+; (define (roomba-fcn a-roomba)
+;   (cond
+;     [(and (string? a-roomba)
+;           (string=? a-roomba "Charging")) ...]
+;     [(routine? a-roomba)
+;        (... (routine-percent a-roomba))]
+;     [(spot-clean? a-roomba)
+;        (... (spot-clean-location a-roomba))]
+;     [(false? a-roomba) ...]))
+
+
+; Step 1
+; next-task: Roomba String -> Roomba
+; consumes a roomba in a current state and a task that is one of "Charge", "Continue", or otherwise a location to spot-clean
+; produces the next state of the roomba
+
+; Use the following logic:
+; A roomba that is "Charging" will continue to charge given "Charge" task,
+;  it will start its routine at 0% given the "Continue" task,
+;  and it will switch to spot cleaning if given a location
+; A roomba that is in a routine will switch to "Charging" when told to "Charge",
+;  it will increase its percent by 1 when told to "Continue" unless it is already at 100% where it will switch to "Charging" on its own
+;  it will only go to spot cleaning when given a location if it is 50% or more done with its routine, otherwise it does not change state or advance its percentage
+; A roomba that is spot-cleaning will ignore "Charging" commands ,
+;   it will switch to its routine at 0% when told to continue
+;   and it will switch to spot cleaning a new location when given that location
+; A roomba that is offline (false) will only listen to the "Charge" instruction which connects it to its dock and switches it to "Charging"
+
+; stub:
+;(define (next-task a-roomba a-task) a-roomba)
+
+; Step 2
+(check-expect (next-task "Charging" "Continue") (make-routine 0))
+(check-expect (next-task (make-routine 75) "Bathroom") (make-spot-clean "Bathroom"))
+
+
+
+; Step 3
+; template:
+; ;[YOUR CODE HERE]
+; (define (next-task a-roomba a-task)
+;   (cond
+;     [(and (string? a-roomba)
+;           (string=? a-roomba CHARGING)) (charging a-task) ]
+;     [(routine? a-roomba)
+;         (routine-task a-roomba a-task)]
+;     [(spot-clean? a-roomba)
+;         (clean a-roomba a-task)]
+;      [(false? a-roomba) (offline a-roomba a-task)]))
+; 
+; (define (roomba-fcn a-roomba)
+;   (cond
+;     [(and (string? a-roomba)
+;           (string=? a-roomba "Charging")) ...]
+;     [(routine? a-roomba)
+;        (... (routine-percent a-roomba))]
+;     [(spot-clean? a-roomba)
+;        (... (spot-clean-location a-roomba))]
+;     [(false? a-roomba) ...]))
+; 
+; 
+; (define (charging a-task)
+;   (cond
+;     [(string=? a-task "Charge")...]
+;     [(string=? a-task "Continue") ...]
+;     [(...) (make-spot-clean a-task)]
+;     ))
+; 
+; (define (routine-task a-roomba a-task)
+;   (cond
+;     [(string=? a-task "Charge") ...]
+;     [(string=? a-task "Continue") (...))]
+;     [(...)(check-spot-percent (routine-percent a-roomba) a-task)]
+;     ))
+; 
+; (define (check-routine-percent num)
+;   (cond
+;     [(< num 100)(...))]
+;     [else CHARGING]))
+; 
+; (define (check-spot-percent num string)
+;   (cond
+;     [(>= num 50)(...)]
+;     [else (make-routine num)]))
+; 
+; (define (clean a-roomba a-task)
+;    (cond
+;      [(string=? a-task "Continue") ...]
+;      [(string=? a-task "Charge") ...]
+;      [(...)(make-spot-clean a-task)]))
+; 
+; 
+; (define (offline a-roomba a-task)
+;   (cond
+;     [(string=? a-task "Charge") ...]
+;     [else #false]))
+; 
+ 
+
+; Step 4
+
+;; [YOUR CODE HERE]
+
+(define (next-task a-roomba a-task)
+  (cond
+    [(and (string? a-roomba)
+          (string=? a-roomba CHARGING)) (charging a-task) ]
+    [(routine? a-roomba)
+        (routine-task a-roomba a-task)]
+    [(spot-clean? a-roomba)
+        (clean a-roomba a-task)]
+     [(false? a-roomba) (offline a-roomba a-task)]))
+
+
+(define (charging a-task)
+  (cond
+    [(string=? a-task "Charge") CHARGING]
+    [(string=? a-task "Continue") START-ROUTINE]
+    [(string? a-task) (make-spot-clean a-task)]
+    ))
+
+(define (routine-task a-roomba a-task)
+  (cond
+    [(string=? a-task "Charge") CHARGING]
+    [(string=? a-task "Continue") (check-routine-percent (routine-percent a-roomba))]
+    [(string? a-task)(check-spot-percent (routine-percent a-roomba) a-task)]
+    ))
+
+(define (check-routine-percent num)
+  (cond
+    [(< num 100)(make-routine (+ 1 num))]
+    [else CHARGING]))
+
+(define (check-spot-percent num string)
+  (cond
+    [(>= num 50)(make-spot-clean string)]
+    [else (make-routine num)]))
+
+(define (clean a-roomba a-task)
+   (cond
+     [(string=? a-task "Continue") START-ROUTINE]
+     [(string=? a-task "Charge") a-roomba]
+     [(string? a-task)(make-spot-clean a-task)]))
+
+
+(define (offline a-roomba a-task)
+  (cond
+    [(string=? a-task "Charge") CHARGING]
+    [else #false]))
+
+
+ 
+; Step 5
+;; [YOUR CODE HERE]
+(check-expect (next-task "Charging" "Charge") "Charging")
+(check-expect (next-task #false "Charge") "Charging")
+(check-expect (next-task #false "Continue") #false)
+(check-expect (next-task "Charging" "Bedroom") (make-spot-clean "Bedroom"))
+(check-expect (next-task (make-routine 75) "Charge") "Charging")
+(check-expect (next-task (make-routine 100) "Continue") "Charging")
+(check-expect (next-task (make-routine 80) "Continue") (make-routine 81) )
+(check-expect (next-task (make-routine 100) "Kitchen") (make-spot-clean "Kitchen"))
+(check-expect (next-task (make-routine 50) "FamilyRoom") (make-spot-clean "FamilyRoom"))
+(check-expect (next-task (make-routine 40) "FamilyRoom") (make-routine 40))
+(check-expect (next-task (make-spot-clean "Bathroom") "Charge") (make-spot-clean "Bathroom"))
+(check-expect (next-task (make-spot-clean "Bathroom") "Continue") (make-routine 0))
+(check-expect (next-task (make-spot-clean "FamilyRoom") "Bathroom") (make-spot-clean "Bathroom"))
+
+
+
